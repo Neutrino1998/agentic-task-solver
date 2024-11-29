@@ -1,0 +1,8 @@
+# Ignore Python bytecode files
+__pycache__/
+# Ignore .env files (for sensitive data like API keys)
+.env
+# Ignore log files
+logs/
+# Ignore Python install cache
+agentic_task_solver.egg-info/
