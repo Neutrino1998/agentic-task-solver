@@ -156,7 +156,7 @@ def execute_python_code(code: str) -> dict:
             result = {'success': {'math': "<module 'math' (built-in)>", 'a': 2.0, 'b': 2, 'result': 4.0}}
     """
     interpreter = BlacklistCodeInterpreter()
-    return interpreter.execute(code)
+    return {"result": interpreter.execute(code)}
 
 if __name__ == "__main__":
     # =======================================================

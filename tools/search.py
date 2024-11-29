@@ -18,7 +18,7 @@ def ddg_search_engine(query: str) -> list[dict]:
     max_results = 5
     ddg_api = DuckDuckGoSearchAPIWrapper(time='m', source="text") # Time Options: d, w, m, y
     results = ddg_api.results(query, max_results=max_results)
-    return [{"url": r.get("link"), "title": r.get("title"), "content": r.get("snippet"), "date": r.get("date", "")} for r in results]
+    return {"result": [{"url": r.get("link"), "title": r.get("title"), "content": r.get("snippet"), "date": r.get("date", "")} for r in results]}
 
 if __name__ == "__main__":
     import asyncio

@@ -23,6 +23,7 @@ logger = Logger(name="AgentLogger", level=LOG_LEVEL, log_path=LOG_PATH, log_file
 class ManagerState(TypedDict):
     manager_messages: Annotated[list, add_messages]
     format_messages: dict
+    workspace: dict
     recursion_count: int
 
 class ManagerConfigSchema(TypedDict):
@@ -35,7 +36,7 @@ class ManagerConfigSchema(TypedDict):
 
 
 class ManagerAgent:
-    """An agent class to initialize manager agents."""
+    """An agent class to initialize manager agents. A manager agent can utilize its subordinate agents to solve a given task."""
 
     def __init__(self, agent_name: str="Manager Agent", 
                  agent_description: str="",
@@ -176,7 +177,7 @@ class ManagerAgent:
                 # get tool call result
                 tool_result = await tools_by_name.get(tool_name).ainvoke(tool_args)
                 # format response message
-                tool_result_json = json.dumps(tool_result, indent=4, ensure_ascii=False)
+                tool_result_json = json.dumps(tool_result.get("result"), indent=4, ensure_ascii=False)
                 tool_msg = HumanMessage(content=f"""
 <tool_call_result>
 {tool_result_json}
