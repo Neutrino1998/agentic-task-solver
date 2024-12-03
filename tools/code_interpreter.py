@@ -1,4 +1,5 @@
 import ast
+import pandas as pd
 from langchain_core.tools import tool
 # Log
 from my_logger import Logger, LOG_LEVEL, LOG_PATH, LOG_FILE
@@ -62,7 +63,7 @@ class BlacklistCodeInterpreter:
                 clean_env[key] = repr(value)
         return clean_env
 
-    def execute(self, code: str) -> dict:
+    def execute(self, code: str, clean_env: bool = False) -> dict:
         """
         Execute the provided Python code in a controlled environment, handling success and failure.
         
@@ -122,18 +123,18 @@ class BlacklistCodeInterpreter:
             if not self.environment.get("_expression_results"):
                 self.environment.pop("_expression_results", None)
             
-            # Clean the environment to ensure JSON serializability
-            cleaned_env = self.clean_environment(self.environment)
-            
-            # Return the cleaned environment as a result
-            return {"success": cleaned_env}
+            # Clean or return the environment based on the flag
+            if clean_env:
+                # Clean the environment to ensure JSON serializability
+                cleaned_env = self.clean_environment(self.environment)
+                return {"success": cleaned_env}
+            else:
+                return {"success": self.environment}
         
         except Exception as e:
             # Return the exception message if something went wrong
             return {"error": str(e)}
 
-
-# The function to interact with the BlacklistCodeInterpreter
 @tool
 def execute_python_code(code: str) -> dict:
     """
@@ -156,7 +157,86 @@ def execute_python_code(code: str) -> dict:
             result = {'success': {'math': "<module 'math' (built-in)>", 'a': 2.0, 'b': 2, 'result': 4.0}}
     """
     interpreter = BlacklistCodeInterpreter()
-    return {"result": interpreter.execute(code)}
+    return {"result": interpreter.execute(code, clean_env=True)}
+
+class DataAnalysisInterpreter(BlacklistCodeInterpreter):
+    """
+    Extends BlacklistCodeInterpreter to handle pandas DataFrames for data analysis tasks.
+    """
+
+    def execute_analysis_code(
+        self, 
+        code: str, 
+        dataframes: dict[str, pd.DataFrame]
+    ) -> pd.DataFrame:
+        """
+        Executes Python code with DataFrame inputs from a dictionary and returns analysis results.
+
+        Parameters:
+            code (str): The Python code to execute.
+            dataframes (Dict[str, pd.DataFrame]): 
+                Dictionary where keys are variable names and values are DataFrames.
+
+        Returns:
+            dataframes (Dict[str, pd.DataFrame]): The resulting DataFrames if successfully generated.
+            None: If no DataFrame is produced.
+        """
+        # Load DataFrames into the environment
+        if not isinstance(dataframes, dict):
+            raise ValueError("dataframes must be a dictionary of DataFrame objects.")
+
+        self.environment.update(dataframes)
+        self.environment["pd"] = pd  # Add pandas to the execution environment
+
+        # Execute the code safely
+        result = self.execute(code)
+
+        if "error" in result:
+            # If an error occurred, log and return None
+            logger.logger.error(f"Code execution error: {result['error']}")
+            return None
+
+        # Extract DataFrame from the cleaned environment
+        cleaned_env = result.get("success", {})
+        output_dataframes = {
+            key:value for key, value in cleaned_env.items() if isinstance(value, pd.DataFrame)
+        }
+
+        # Return the first DataFrame found or None if none were found
+        return output_dataframes if output_dataframes else None
+
+@tool
+def execute_python_code_with_dataframes(code: str, workspace: dict) -> dict:
+    """
+    Execute Python code safely with provided DataFrames cached in workspace and return the resulting DataFrames.
+
+    Args:
+        code (str): Python code to execute. This should reference DataFrame variables.
+  
+    Returns:
+        None: The result will be cached into workspace.
+
+    Example:
+
+        .. code-block:: python
+            # cached dataframe:
+            dataframes = {
+                "sales_data": pd.DataFrame({"region": ["North", "South"], "sales": [300, 400]}),
+                "targets": pd.DataFrame({"region": ["North", "South"], "target": [350, 390]})
+            }
+            # your code should be like:
+            code = "result_df = pd.merge(sales_data, targets, on='region')"
+            result = execute_python_code_with_dataframes.invoke(code)
+            # The result will be:
+            result = {'sales_data': <pandas.DataFrame>, 'targets': <pandas.DataFrame>, 'result': <pandas.DataFrame>}
+    """
+    from utility.manage_workspace import filter_workspace_content
+    # get pd.DataFrame from workspace
+    filtered_workspace = filter_workspace_content(workspace, content_type=pd.DataFrame)
+    # format dataframes to be Dict[str, pd.DataFrame]
+    dataframes = {key:value.get("content") for key, value in filtered_workspace.items()}
+    interpreter = DataAnalysisInterpreter()
+    return interpreter.execute_analysis_code(code, dataframes)
 
 if __name__ == "__main__":
     # =======================================================
@@ -170,13 +250,40 @@ result = a + b
     """
     result = execute_python_code.invoke(code)
     print(result)
+
     print("="*80 + "\n> Testing execute_python_code safty check:")
     code = """
 import os
-import math
-a = math.sqrt(4)
-b = 2
-result = a + b
     """
     result = execute_python_code.invoke(code)
+    print(result)
+
+    print("="*80 + "\n> Testing execute_python_code_with_dataframes:")
+    from tools.data_loader import generate_dataframe_schema
+    sample_dataframe_1 = pd.DataFrame({"region": ["North", "South"], "sales": [300, 400]})
+    sample_dataframe_2 = pd.DataFrame({"region": ["North", "South"], "target": [350, 390]})
+    sample_text = "# My Article\nThis is a sample text."
+    test_workspace = {
+
+                        "sales_data": {
+                            "content": sample_dataframe_1,
+                            "metadata": {
+                                "schema": generate_dataframe_schema(sample_dataframe_1)
+                                }
+                            },
+                        "targets": {
+                            "content": sample_dataframe_2,
+                            "metadata": {
+                                "schema": generate_dataframe_schema(sample_dataframe_2)
+                                }
+                            },
+                        "my_article": {
+                           "content": sample_text,
+                           "metadata": {}
+                       }
+                      }
+    code = """
+result = pd.merge(sales_data, targets, on='region')
+"""
+    result = execute_python_code_with_dataframes.invoke({"code":code, "workspace":test_workspace})
     print(result)
