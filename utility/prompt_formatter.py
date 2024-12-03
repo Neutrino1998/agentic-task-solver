@@ -1,6 +1,8 @@
 from inspect import signature
 from langchain_core.tools.base import BaseTool
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, ToolMessage, AnyMessage
+import pandas as pd
+import json
 
 def add_indent(input_str, indent_level: int = 1, use_strip=False):
     indent = "  " * indent_level
@@ -106,18 +108,57 @@ def get_xml_subordinates(subordinates: list, indent_level: int = 0) -> str:
         The rendered XML string.
     """
     # Start XML structure
-    xml_output = '<agent_list>'
+    xml_output = "<agent_list>"
     
     # Loop through each tool and build its XML representation
     for agent in subordinates:
         # Format the tool's XML
-        xml_output += add_indent(f'\n<agent>', indent_level=1)
-        xml_output += add_indent(f'\n<agent_name>{agent.agent_name}</agent_name>', indent_level=2)
-        xml_output += add_indent(f'\n<agent_description>{agent.agent_description}</agent_description>', indent_level=2)
-        xml_output += add_indent(f'\n</agent>', indent_level=1)
+        xml_output += add_indent(f"\n<agent>", indent_level=1)
+        xml_output += add_indent(f"\n<agent_name>{agent.agent_name}</agent_name>", indent_level=2)
+        xml_output += add_indent(f"\n<agent_description>{agent.agent_description}</agent_description>", indent_level=2)
+        xml_output += add_indent(f"\n</agent>", indent_level=1)
     
     # Close the tool_list tag
-    xml_output += '\n</agent_list>'
+    xml_output += "\n</agent_list>"
+    indented_xml_output = add_indent(xml_output, indent_level=indent_level)
+    return indented_xml_output
+
+
+def get_xml_workspace(workspace: dict, df_sample_size: int = 2, text_sample_size: int = 100, indent_level: int = 0) -> str:
+    """Render the cached workspace in XML format.
+
+    Args:
+        workspace: The cached workspace.
+
+    Returns:
+        The rendered XML string.
+    """
+    from tools.data_loader import generate_dataframe_schema
+    # Start XML structure
+    xml_output = "<workspace>"
+    for key, value in workspace.items():
+        if isinstance(value.get("content"), pd.DataFrame):
+            # Format dataframe
+            xml_output += add_indent(f"\n<dataframe>", indent_level=1)
+            xml_output += add_indent(f"\n<name>{key}</name>", indent_level=2)
+            if value.get("metadata").get("description") is not None:
+                xml_output += add_indent(f"\n<description>{value.get('metadata').get('description')}</description>", indent_level=2)
+            dataframe_schema = json.dumps(generate_dataframe_schema(value.get("content"), sample_size=df_sample_size), 
+                                                                       indent=4, ensure_ascii=False)
+            xml_output += add_indent(f"\n<dataframe_schema>\n{dataframe_schema}\n</dataframe_schema>", indent_level=2)
+            xml_output += add_indent(f"\n</dataframe>", indent_level=1)
+        if isinstance(value.get("content"), str):
+            # Format text
+            xml_output += add_indent(f"\n<text>", indent_level=1)
+            xml_output += add_indent(f"\n<name>{key}</name>", indent_level=2)
+            if value.get("metadata").get("description") is not None:
+                xml_output += add_indent(f"\n<description>{value.get('metadata').get('description')}</description>", indent_level=2)
+            content_snippet = value.get('content') if len(value.get('content')) <= 2 * text_sample_size else \
+                value.get('content')[:text_sample_size] + '...' + value.get('content')[-text_sample_size:]
+            xml_output += add_indent(f"\n<content_snippet>\n{content_snippet}\n</content_snippet>", indent_level=2)
+            xml_output += add_indent(f"\n</text>", indent_level=1)
+    # Close the tool_list tag
+    xml_output += "\n</workspace>"
     indented_xml_output = add_indent(xml_output, indent_level=indent_level)
     return indented_xml_output
 
@@ -133,7 +174,25 @@ if __name__ == "__main__":
         HumanMessage(f"Would you like to know more info?", name="Data Specialist")
     ]
     print(get_xml_msg_history(messages=test_messages))
-
+    # -------------------------------------------------------
     print("="*80+"\n> Testing get_xml_tools:")
     rendered_tools_xml = get_xml_tools([ddg_search_engine, execute_python_code_with_dataframes])
     print(rendered_tools_xml)
+    # -------------------------------------------------------
+    print("="*80+"\n> Testing get_xml_workspace:")
+    sample_dataframe = pd.DataFrame({"region": ["North", "South"], "sales": [300, 400]})
+    sample_text = "# My Article\nThis is a sample article to ilustrate how workspace cache text."
+    test_workspace = {
+                        "sales_data": {
+                            "content": sample_dataframe,
+                            "metadata": {
+                                "description": "This is a dataframe of sales data."
+                                }
+                            },
+                        "my_article": {
+                           "content": sample_text,
+                           "metadata": {}
+                       }
+                      }
+    rendered_workspace_xml = get_xml_workspace(test_workspace)
+    print(rendered_workspace_xml)
