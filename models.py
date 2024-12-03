@@ -39,7 +39,7 @@ def get_embeddings(embedding_name: str="text-embedding-v1"):
 if __name__ == "__main__":
     from langchain_core.messages import HumanMessage
     # =======================================================
-    # 测试用例
+    # Test Example
     test_llm = get_llm(
     # model_name="qwen-turbo",
     # model_name="qwen-plus",
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     # model_name="qwen-max"
     )
     query = """
-    LangGraph的功能是什么?
+    What is Langgraph?
     """
     print("> Running:", test_llm.model_name)
     res = test_llm.stream([HumanMessage(content=query)], streaming=True)

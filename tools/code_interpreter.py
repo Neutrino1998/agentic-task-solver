@@ -250,16 +250,15 @@ result = a + b
     """
     result = execute_python_code.invoke(code)
     print(result)
-
+    # -------------------------------------------------------
     print("="*80 + "\n> Testing execute_python_code safty check:")
     code = """
 import os
     """
     result = execute_python_code.invoke(code)
     print(result)
-
+    # -------------------------------------------------------
     print("="*80 + "\n> Testing execute_python_code_with_dataframes:")
-    from tools.data_loader import generate_dataframe_schema
     sample_dataframe_1 = pd.DataFrame({"region": ["North", "South"], "sales": [300, 400]})
     sample_dataframe_2 = pd.DataFrame({"region": ["North", "South"], "target": [350, 390]})
     sample_text = "# My Article\nThis is a sample text."
@@ -267,15 +266,11 @@ import os
 
                         "sales_data": {
                             "content": sample_dataframe_1,
-                            "metadata": {
-                                "schema": generate_dataframe_schema(sample_dataframe_1)
-                                }
+                            "metadata": {}
                             },
                         "targets": {
                             "content": sample_dataframe_2,
-                            "metadata": {
-                                "schema": generate_dataframe_schema(sample_dataframe_2)
-                                }
+                            "metadata": {}
                             },
                         "my_article": {
                            "content": sample_text,
