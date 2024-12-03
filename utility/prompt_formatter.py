@@ -10,26 +10,28 @@ def add_indent(input_str, indent_level: int = 1, use_strip=False):
         return '\n'.join(indent + line for line in input_str.splitlines())
     
 
-def get_xml_tools(tools: list[BaseTool], indent_level: int = 0) -> str:
+def get_xml_tools(tools: list[BaseTool], indent_level: int = 0, ignored_params: list[str] = ["workspace"]) -> str:
     """Render the tool name and description in XML format.
 
     Args:
         tools: The tools to render.
+        ignored_params: List of parameter names to ignore (e.g., ['workspace']).
 
     Returns:
         The rendered XML string.
     """
     # Start XML structure
     xml_output = '<tool_list>'
-    
+
     # Loop through each tool and build its XML representation
     for tool in tools:
         # Check if the tool has a function and retrieve its signature
         if hasattr(tool, "func") and tool.func:
             sig = signature(tool.func)
-            # Prepare tool name, parameters, and return type
-            parameter_and_return = str(sig)
-            # parameter_and_return = f"({', '.join([f'{k}: {v.annotation}' for k, v in sig.parameters.items()])}) -> {sig.return_annotation.__name__}"
+            # Filter out ignored parameters
+            filtered_params = [(k, v) for k, v in sig.parameters.items() if k not in ignored_params]
+            # Prepare parameter and return type
+            parameter_and_return = f"({', '.join([f'{k}: {v.annotation}' for k, v in filtered_params])}) -> {sig.return_annotation.__name__}"
             # Prepare docstring
             docstring = tool.description or ""
         else:
@@ -43,7 +45,7 @@ def get_xml_tools(tools: list[BaseTool], indent_level: int = 0) -> str:
         xml_output += add_indent(f'\n<parameter_and_return>{parameter_and_return}</parameter_and_return>', indent_level=2)
         xml_output += add_indent(f'\n<docstring>\n{docstring}\n</docstring>', indent_level=2)
         xml_output += add_indent(f'\n</tool>', indent_level=1)
-    
+
     # Close the tool_list tag
     xml_output += '\n</tool_list>'
     indented_xml_output = add_indent(xml_output, indent_level=indent_level)
@@ -121,7 +123,7 @@ def get_xml_subordinates(subordinates: list, indent_level: int = 0) -> str:
 
 if __name__ == "__main__":
     from tools.search import ddg_search_engine
-    from tools.code_interpreter import execute_python_code
+    from tools.code_interpreter import execute_python_code_with_dataframes
     # =======================================================
     # Test Example
     print("="*80+"\n> Testing get_xml_msg_history:")
@@ -133,5 +135,5 @@ if __name__ == "__main__":
     print(get_xml_msg_history(messages=test_messages))
 
     print("="*80+"\n> Testing get_xml_tools:")
-    rendered_tools_xml = get_xml_tools([ddg_search_engine, execute_python_code])
+    rendered_tools_xml = get_xml_tools([ddg_search_engine, execute_python_code_with_dataframes])
     print(rendered_tools_xml)
