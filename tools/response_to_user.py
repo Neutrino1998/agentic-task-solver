@@ -1,5 +1,6 @@
 from langchain_core.tools import tool
 
+# This is a special placeholder tool to let agent be aware how to response to user.
 @tool
 def response_to_user(text: str) -> None: 
     """

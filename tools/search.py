@@ -3,7 +3,7 @@ from langchain_community.utilities.duckduckgo_search import DuckDuckGoSearchAPIW
 from langchain_core.tools import tool
 
 @tool
-def ddg_search_engine(query: str) -> list[dict]:
+def ddg_search_engine(query: str, workspace: dict = {}) -> list[dict]:
     """
     Search the internet using DuckDuckGo Search API.
     *Note: Use `pip install -U duckduckgo_search==5.3.1b1` to somewhat avoid rate limit.

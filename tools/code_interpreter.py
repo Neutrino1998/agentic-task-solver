@@ -136,7 +136,7 @@ class BlacklistCodeInterpreter:
             return {"error": str(e)}
 
 @tool
-def execute_python_code(code: str) -> dict:
+def execute_python_code(code: str, workspace: dict = {}) -> dict:
     """
     Execute Python code safely and return the result or error message.
     
@@ -206,7 +206,7 @@ class DataAnalysisInterpreter(BlacklistCodeInterpreter):
         return output_dataframes if output_dataframes else None
 
 @tool
-def execute_python_code_with_dataframes(code: str, workspace: dict) -> dict:
+def execute_python_code_with_dataframes(code: str, workspace: dict = {}) -> dict:
     """
     Execute Python code safely with provided DataFrames cached in workspace and return the resulting DataFrames.
 

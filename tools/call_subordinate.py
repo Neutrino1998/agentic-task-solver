@@ -1,5 +1,6 @@
 from langchain_core.tools import tool
 
+# This is a special placeholder tool to let manager agent be aware how to call subordinate agents.
 @tool
 def call_subordinate(agent_name:str, message: str, reset: bool) -> None: 
     """
