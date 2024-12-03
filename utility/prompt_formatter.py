@@ -136,27 +136,30 @@ def get_xml_workspace(workspace: dict, df_sample_size: int = 2, text_sample_size
     from tools.data_loader import generate_dataframe_schema
     # Start XML structure
     xml_output = "<workspace>"
-    for key, value in workspace.items():
-        if isinstance(value.get("content"), pd.DataFrame):
-            # Format dataframe
-            xml_output += add_indent(f"\n<dataframe>", indent_level=1)
-            xml_output += add_indent(f"\n<name>{key}</name>", indent_level=2)
-            if value.get("metadata").get("description") is not None:
-                xml_output += add_indent(f"\n<description>{value.get('metadata').get('description')}</description>", indent_level=2)
-            dataframe_schema = json.dumps(generate_dataframe_schema(value.get("content"), sample_size=df_sample_size), 
-                                                                       indent=4, ensure_ascii=False)
-            xml_output += add_indent(f"\n<dataframe_schema>\n{dataframe_schema}\n</dataframe_schema>", indent_level=2)
-            xml_output += add_indent(f"\n</dataframe>", indent_level=1)
-        if isinstance(value.get("content"), str):
-            # Format text
-            xml_output += add_indent(f"\n<text>", indent_level=1)
-            xml_output += add_indent(f"\n<name>{key}</name>", indent_level=2)
-            if value.get("metadata").get("description") is not None:
-                xml_output += add_indent(f"\n<description>{value.get('metadata').get('description')}</description>", indent_level=2)
-            content_snippet = value.get('content') if len(value.get('content')) <= 2 * text_sample_size else \
-                value.get('content')[:text_sample_size] + '...' + value.get('content')[-text_sample_size:]
-            xml_output += add_indent(f"\n<content_snippet>\n{content_snippet}\n</content_snippet>", indent_level=2)
-            xml_output += add_indent(f"\n</text>", indent_level=1)
+    if workspace:
+        for key, value in workspace.items():
+            if isinstance(value.get("content"), pd.DataFrame):
+                # Format dataframe
+                xml_output += add_indent(f"\n<dataframe>", indent_level=1)
+                xml_output += add_indent(f"\n<name>{key}</name>", indent_level=2)
+                if value.get("metadata").get("description") is not None:
+                    xml_output += add_indent(f"\n<description>{value.get('metadata').get('description')}</description>", indent_level=2)
+                dataframe_schema = json.dumps(generate_dataframe_schema(value.get("content"), sample_size=df_sample_size), 
+                                                                        indent=4, ensure_ascii=False)
+                xml_output += add_indent(f"\n<dataframe_schema>\n{dataframe_schema}\n</dataframe_schema>", indent_level=2)
+                xml_output += add_indent(f"\n</dataframe>", indent_level=1)
+            if isinstance(value.get("content"), str):
+                # Format text
+                xml_output += add_indent(f"\n<text>", indent_level=1)
+                xml_output += add_indent(f"\n<name>{key}</name>", indent_level=2)
+                if value.get("metadata").get("description") is not None:
+                    xml_output += add_indent(f"\n<description>{value.get('metadata').get('description')}</description>", indent_level=2)
+                content_snippet = value.get('content') if len(value.get('content')) <= 2 * text_sample_size else \
+                    value.get('content')[:text_sample_size] + '...' + value.get('content')[-text_sample_size:]
+                xml_output += add_indent(f"\n<content_snippet>\n{content_snippet}\n</content_snippet>", indent_level=2)
+                xml_output += add_indent(f"\n</text>", indent_level=1)
+    else:
+        xml_output += add_indent(f"\nThe workspace is empty now.", indent_level=1)
     # Close the tool_list tag
     xml_output += "\n</workspace>"
     indented_xml_output = add_indent(xml_output, indent_level=indent_level)
@@ -196,3 +199,8 @@ if __name__ == "__main__":
                       }
     rendered_workspace_xml = get_xml_workspace(test_workspace)
     print(rendered_workspace_xml)
+    # -------------------------------------------------------
+    print("="*80+"\n> Testing get_xml_workspace with empty workspace:")
+    test_empty_workspace = {}
+    rendered_empty_workspace_xml = get_xml_workspace(test_empty_workspace)
+    print(rendered_empty_workspace_xml)
