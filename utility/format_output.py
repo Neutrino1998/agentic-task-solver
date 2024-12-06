@@ -177,16 +177,16 @@ Please format the output using the following Json structure:
     
 if __name__ == "__main__":
     # =======================================================
-    # 测试用例
-    # Step 1: 定义 Generator
+    # Test Example
+    # Step 1: Define your Generator
     test_llm = get_llm(model_name="qwen2.5-72b-instruct")
     generator = FormatOutputGenerator(test_llm, verbose=True)
-    # Step 2: 定义 Pydantic 模型
+    # Step 2: Define your Pydantic model
     class RelatedSubjects(BaseModel):
         topics: list[str] = Field(
             description="Comprehensive list of related subjects as background research.",
         )
-    # Step 3: 调用 generate
+    # Step 3: call generate
     max_sections = 5
     query = "Impact of million-plus token context window language models on RAG"
     related_topics = asyncio.run(generator.generate(
