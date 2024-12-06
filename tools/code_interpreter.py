@@ -54,10 +54,13 @@ class BlacklistCodeInterpreter:
         Returns:
             A cleaned dictionary with only serializable objects.
         """
+        from tools.data_loader import generate_dataframe_schema
         clean_env = {}
         for key, value in env.items():
             if isinstance(value, (int, float, str, list, dict, bool, type(None))):
                 clean_env[key] = value
+            elif isinstance(value, pd.DataFrame):
+                clean_env[key] = {"dataframe_schema": generate_dataframe_schema(value)}
             else:
                 # Convert non-serializable objects to a string representation
                 clean_env[key] = repr(value)
@@ -132,6 +135,7 @@ class BlacklistCodeInterpreter:
                 return {"success": self.environment}
         
         except Exception as e:
+            logger.logger.warning(f"Code execution error: {str(e)}")
             # Return the exception message if something went wrong
             return {"error": str(e)}
 
@@ -178,8 +182,8 @@ class DataAnalysisInterpreter(BlacklistCodeInterpreter):
                 Dictionary where keys are variable names and values are DataFrames.
 
         Returns:
-            dataframes (Dict[str, pd.DataFrame]): The resulting DataFrames if successfully generated.
-            None: If no DataFrame is produced.
+            A dictionary containing the result: {"successs": {dict of all used variables}}
+            or error message: {"error": "error message."}
         """
         # Load DataFrames into the environment
         if not isinstance(dataframes, dict):
@@ -189,32 +193,23 @@ class DataAnalysisInterpreter(BlacklistCodeInterpreter):
         self.environment["pd"] = pd  # Add pandas to the execution environment
 
         # Execute the code safely
-        result = self.execute(code)
+        result = self.execute(code, clean_env=False)
 
-        if "error" in result:
-            # If an error occurred, log and return None
-            logger.logger.error(f"Code execution error: {result['error']}")
-            return None
-
-        # Extract DataFrame from the cleaned environment
-        cleaned_env = result.get("success", {})
-        output_dataframes = {
-            key:value for key, value in cleaned_env.items() if isinstance(value, pd.DataFrame)
-        }
-
-        # Return the first DataFrame found or None if none were found
-        return output_dataframes if output_dataframes else None
+        return result
+        
 
 @tool
-def execute_python_code_with_dataframes(code: str, workspace: dict = {}) -> dict:
+def execute_python_code_with_df(code: str, workspace: dict = {}) -> dict:
     """
-    Execute Python code safely with provided DataFrames cached in workspace and return the resulting DataFrames.
+    Execute Python code safely with provided DataFrames cached in workspace and return the results.
 
     Args:
         code (str): Python code to execute. This should reference DataFrame variables.
   
     Returns:
-        None: The result will be cached into workspace.
+        A dictionary containing the result: {"successs": {dict of all used variables}}
+        * Note the result will only contain schema of a dataframe! If you want to get any value,
+          store them in a serializable variable like a dict.
 
     Example:
 
@@ -225,10 +220,19 @@ def execute_python_code_with_dataframes(code: str, workspace: dict = {}) -> dict
                 "targets": pd.DataFrame({"region": ["North", "South"], "target": [350, 390]})
             }
             # your code should be like:
-            code = "result_df = pd.merge(sales_data, targets, on='region')"
+            code = "merged_data = pd.merge(sales_data, targets, on='region') # you will only get schema of merged_data
+                    difference_dict = {} # however, you can get the value of difference_dict
+                    for index, row in merged_data.iterrows():
+                        region = row['region']
+                        sales_diff = row['sales'] - row['target']
+                        difference_dict[region] = sales_diff"
             result = execute_python_code_with_dataframes.invoke(code)
             # The result will be:
-            result = {'sales_data': <pandas.DataFrame>, 'targets': <pandas.DataFrame>, 'result': <pandas.DataFrame>}
+            result = {"success": {"sales_data": <pandas.DataFrame>, "targets": <pandas.DataFrame>, 
+                      "difference_dict": {
+                            "North": -50,
+                            "South": 10
+                        },...}}
     """
     from utility.manage_workspace import filter_workspace_content
     # get pd.DataFrame from workspace
@@ -236,9 +240,57 @@ def execute_python_code_with_dataframes(code: str, workspace: dict = {}) -> dict
     # format dataframes to be Dict[str, pd.DataFrame]
     dataframes = {key:value.get("content") for key, value in filtered_workspace.items()}
     interpreter = DataAnalysisInterpreter()
-    return interpreter.execute_analysis_code(code, dataframes)
+    result = interpreter.execute_analysis_code(code, dataframes)
+    if "error" in result:
+        # If an error occurred, log and return None
+        return {"result": result, "workspace": {}}
+
+    # Get cleaned environment to response to agent
+    serializable_result = {"success": interpreter.clean_environment(result.get("success", {}))}
+    # Extract DataFrame from the raw environment
+    extract_dataframes = {
+        key:value for key, value in result.get("success", {}).items() if isinstance(value, pd.DataFrame)
+    }
+    
+    # Return the code execution result and update to the workspace
+    for key, value in extract_dataframes.items():
+        if key in workspace:
+            # Update the content for existing keys
+            workspace[key]['content'] = value
+        else:
+            # Add new keys with default metadata
+            workspace[key] = {
+                "content": value,
+                "metadata": {}
+            }
+    return {"result": serializable_result, "workspace": workspace}
+
+def update_workspace(workspace: dict, new_data: dict) -> dict:
+    """
+    Updates the workspace with new data. For existing keys, updates the `content`.
+    For new keys, adds them with empty `metadata`.
+
+    Args:
+        workspace (dict): The original workspace dictionary.
+        new_data (dict): A dictionary with new data to update the workspace.
+
+    Returns:
+        dict: The updated workspace.
+    """
+    for key, content in new_data.items():
+        if key in workspace:
+            # Update the content for existing keys
+            workspace[key]['content'] = content
+        else:
+            # Add new keys with default metadata
+            workspace[key] = {
+                "content": content,
+            }
+    return workspace
+
 
 if __name__ == "__main__":
+    import json
     # =======================================================
     # Test Example
     print("="*80 + "\n> Testing execute_python_code:")
@@ -278,7 +330,13 @@ import os
                        }
                       }
     code = """
-result = pd.merge(sales_data, targets, on='region')
+merged_data = pd.merge(sales_data, targets, on='region')
+
+difference_dict = {}
+for index, row in merged_data.iterrows():
+    region = row['region']
+    sales_diff = row['sales'] - row['target']
+    difference_dict[region] = sales_diff
 """
-    result = execute_python_code_with_dataframes.invoke({"code":code, "workspace":test_workspace})
-    print(result)
+    result = execute_python_code_with_df.invoke({"code":code, "workspace":test_workspace})
+    print(json.dumps(result.get("result"), indent=4, ensure_ascii=False))
