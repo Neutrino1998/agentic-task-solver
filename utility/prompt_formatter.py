@@ -1,4 +1,4 @@
-from inspect import signature
+from inspect import signature, Signature
 from langchain_core.tools.base import BaseTool
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, ToolMessage, AnyMessage
 import pandas as pd
@@ -33,7 +33,12 @@ def get_xml_tools(tools: list[BaseTool], indent_level: int = 0, ignored_params: 
             # Filter out ignored parameters
             filtered_params = [(k, v) for k, v in sig.parameters.items() if k not in ignored_params]
             # Prepare parameter and return type
-            parameter_and_return = f"({', '.join([f'{k}: {v.annotation}' for k, v in filtered_params])}) -> {sig.return_annotation.__name__}"
+            return_annotation = sig.return_annotation
+            if return_annotation is Signature.empty or return_annotation is None:
+                return_annotation_str = "None"
+            else:
+                return_annotation_str = getattr(return_annotation, "__name__", str(return_annotation))
+            parameter_and_return = f"({', '.join([f'{k}: {v.annotation}' for k, v in filtered_params])}) -> {return_annotation_str}"
             # Prepare docstring
             docstring = tool.description or ""
         else:
@@ -135,7 +140,7 @@ def get_xml_workspace(workspace: dict, df_sample_size: int = 2, text_sample_size
     """
     from tools.data_loader import generate_dataframe_schema
     # Start XML structure
-    xml_output = "<workspace>"
+    xml_output = "<workspace_content>"
     if workspace:
         for key, value in workspace.items():
             if isinstance(value.get("content"), pd.DataFrame):
@@ -161,13 +166,14 @@ def get_xml_workspace(workspace: dict, df_sample_size: int = 2, text_sample_size
     else:
         xml_output += add_indent(f"\nThe workspace is empty now.", indent_level=1)
     # Close the tool_list tag
-    xml_output += "\n</workspace>"
+    xml_output += "\n</workspace_content>"
     indented_xml_output = add_indent(xml_output, indent_level=indent_level)
     return indented_xml_output
 
 if __name__ == "__main__":
     from tools.search import ddg_search_engine
-    from tools.code_interpreter import execute_python_code_with_dataframes
+    from tools.code_interpreter import execute_python_code_with_df
+    from tools.response_to_user import response_to_user
     # =======================================================
     # Test Example
     print("="*80+"\n> Testing get_xml_msg_history:")
@@ -179,7 +185,7 @@ if __name__ == "__main__":
     print(get_xml_msg_history(messages=test_messages))
     # -------------------------------------------------------
     print("="*80+"\n> Testing get_xml_tools:")
-    rendered_tools_xml = get_xml_tools([ddg_search_engine, execute_python_code_with_dataframes])
+    rendered_tools_xml = get_xml_tools([ddg_search_engine, response_to_user, execute_python_code_with_df])
     print(rendered_tools_xml)
     # -------------------------------------------------------
     print("="*80+"\n> Testing get_xml_workspace:")
