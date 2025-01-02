@@ -271,7 +271,7 @@ Error in calling tool {tool_name}: {str(e)}
         return removed_content
     
 if __name__ == "__main__":
-    from tools.search import ddg_search_engine
+    from tools.search import bing_search_engine
     import asyncio
     # =======================================================
     # Test Example
@@ -287,7 +287,7 @@ if __name__ == "__main__":
     test_search_agent = WorkerAgent(agent_name="Search Agent 1",
                                 agent_description="A search agent which can gather information online and solve knowledge related task.",
                                 recursion_limit=25,
-                                tools=[ddg_search_engine],
+                                tools=[bing_search_engine],
                                 auxiliary_prompt=auxiliary_prompt,
                                 llm="qwen2.5-72b-instruct",
                                 verbose=True)
@@ -308,7 +308,7 @@ if __name__ == "__main__":
     ))
     # -------------------------------------------------------
     print("="*80 + "\n> Testing data analysis agent:")
-    from tools.data_loader import load_csv_to_dataframe
+    from utility.data_loader import load_csv_to_dataframe
     from tools.code_interpreter import execute_python_code_with_df
     from my_logger import CURRENT_PATH
     import json
