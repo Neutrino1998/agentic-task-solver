@@ -11,7 +11,7 @@ import os
 
 # 配置页面信息
 st.set_page_config(
-    page_title="智能体任务助手",
+    page_title="Task Assistant Agent",
     page_icon="🤖",
     layout="wide",
 
@@ -19,7 +19,7 @@ st.set_page_config(
 
 # Streamlit 页面标题
 st.markdown("""
-# 🤖智能体任务助手
+# 🤖Task Assistant Agent
 `task.assistant.2024.12.27`
 """)
 
@@ -28,7 +28,7 @@ chat_col, workspace_col = st.columns([1, 1])
 
 # 左侧：对话界面
 with chat_col:
-    st.header("对话界面")
+    st.header("Chat Interface")
     chat_container = st.container(border=True)
 
     if "messages" not in st.session_state:
@@ -42,7 +42,7 @@ with chat_col:
             with st.chat_message(message["role"], avatar=chat_avatar):
                 st.markdown(message["content"])
 
-    if user_prompt := st.chat_input("有什么可以帮忙的？"):
+    if user_prompt := st.chat_input("How can I help？"):
         
         with chat_container:
             st.session_state['messages'].append({"role": "user", "content": user_prompt})
@@ -105,16 +105,16 @@ with chat_col:
         manager_agent_with_workspace.clear_memory()
         st.session_state['messages'] = []
 
-    st.button(label="清空聊天记录", on_click=clear_history)
+    st.button(label="Clear History", on_click=clear_history)
     
 # 右侧：Workspace 展示和上传功能
 with workspace_col:
-    st.header("共享 Workspace")
+    st.header("Shared Workspace")
 
     # 显示当前 Workspace
     workspace = manager_agent_with_workspace.get_workspace()
     if workspace:
-        st.write("当前 Workspace 内容：")
+        st.write("Workspace Content：")
         for workspace_key, workspace_content in workspace.items():
             content = workspace_content.get("content")
             description = workspace_content.get("metadata").get("description", "No description.")
@@ -132,18 +132,18 @@ with workspace_col:
 
     else:
         with st.container(border=True):
-            st.write("当前 Workspace 为空。")
+            st.write("Workspace is empty.")
 
     # 上传文件
-    st.subheader("上传文件到 Workspace")
+    st.subheader("Upload to Workspace")
     upload_container = st.container(border=True)
     with upload_container:
-        uploaded_file = st.file_uploader("选择文件", type=["csv", "txt", "json"])
+        uploaded_file = st.file_uploader("Chose your file", type=["csv", "txt", "json"])
         description_col, submit_col = st.columns([4, 1], vertical_alignment="bottom")
         with description_col:
-            file_description = st.text_input("文件描述", placeholder="为文件添加描述...")
+            file_description = st.text_input("File Descriptions", placeholder="Add descriptions to your file...")
         with submit_col:
-            if st.button("上传", use_container_width=True):
+            if st.button("Upload", use_container_width=True):
                 if uploaded_file is not None:
                     file_name = uploaded_file.name
                     file_key = os.path.splitext(file_name)[0]  # 去除文件后缀作为 key
@@ -161,7 +161,7 @@ with workspace_col:
                             # 读取文本文件
                             content = uploaded_file.getvalue().decode(encoding)
                         else:
-                            st.warning("不支持的文件类型！")
+                            st.warning("Unsupported file type!")
                             content = None
 
                         if content is not None:
@@ -176,7 +176,7 @@ with workspace_col:
                                     }
                                 }
                             )
-                            st.success(f"文件 '{file_name}' 已成功上传并添加到 Workspace！")
+                            st.success(f"File '{file_name}' uploaded to Workspace!")
                             st.rerun()
                     except Exception as e:
-                        st.error(f"文件读取失败：{e}")
+                        st.error(f"File '{file_name}' read failed: {e}")
