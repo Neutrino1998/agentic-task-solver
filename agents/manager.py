@@ -246,7 +246,7 @@ Error in calling tool {tool_name}: {str(e)}
 {agent_response}
 </agent_call_result>
 """,
-                name="Agent Manager")
+                name=f"{agent_name}")
                 agent_workspace = assigned_agent.get_workspace()
             else:
                 raise ValueError(f"Requested agent not found: {agent_name}")
@@ -258,7 +258,7 @@ Error in calling tool {tool_name}: {str(e)}
 Error in calling agent {agent_name}: {str(e)}
 </agent_call_result>
 """,
-            name="Agent Manager")
+            name=f"{agent_name}")
             agent_workspace = {}
         return agent_msg, agent_workspace
 
@@ -309,7 +309,14 @@ Error in calling agent {agent_name}: {str(e)}
         except Exception as e:
             logger.logger.error(f"⚠️ Error during calling {self.agent_name}: {str(e)}")
             raise RuntimeError(f"Error while invoking {self.agent_name}: {str(e)}") from e
-
+    
+    def astream(self, message: AnyMessage):
+        try: 
+            return self.manager_graph.astream({"manager_messages": message}, config={**self.graph_config, **self.task_config}, stream_mode="updates") 
+        except Exception as e:
+            logger.logger.error(f"⚠️ Error during streaming {self.agent_name}: {str(e)}")
+            raise RuntimeError(f"Error while streaming {self.agent_name}: {str(e)}") from e
+        
     def clear_memory(self):
         self.manager_memory.storage.clear()
         return
@@ -335,76 +342,47 @@ Error in calling agent {agent_name}: {str(e)}
         return removed_content
 
 if __name__ == "__main__":
-    from tools.search import ddg_search_engine
-    from tools.code_interpreter import execute_python_code
-    from agents.worker import WorkerAgent
+    from agents.preconfig_agents import manager_agent_with_workspace
     import asyncio
     # =======================================================
     # Test Example
-    print("="*80+"\n> Testing manager agent (with search & coding agents):")
-    test_search_agent = WorkerAgent(agent_name="Search Agent 1",
-        agent_description="A search agent which can gather information online and solve knowledge related task.",
-        recursion_limit=25,
-        tools=[ddg_search_engine],
-        llm="qwen2.5-72b-instruct",
-        verbose=True)
-    test_coding_agent = WorkerAgent(agent_name="Coding Agent 1",
-        agent_description="A coding agent which can solve logical task with python code.",
-        recursion_limit=25,
-        tools=[execute_python_code],
-        llm="qwen2.5-72b-instruct",
-        verbose=True)
-    # test_manager_agent = ManagerAgent(agent_name="Manager Agent 1",
-    #     agent_description="A manager agent which can direct a search agent with knowledge related task and a coding agent with logic related task.",
-    #     recursion_limit=25,
-    #     tools=[],
-    #     subordinates=[test_search_agent, test_coding_agent],
-    #     llm="qwen2.5-72b-instruct",
-    #     verbose=True)
-    # test_result = asyncio.run(test_manager_agent(
-    #     message=HumanMessage(
-    #         content="What is 7 times square root of pi?",
-    #         name="User"
-    #     )
-    # ))
-    # -------------------------------------------------------
     print("="*80+"\n> Testing manager agent (with workspace):")
-    from tools.data_loader import load_csv_to_dataframe
-    from tools.code_interpreter import execute_python_code_with_df
+    from utility.data_loader import load_csv_to_dataframe
     from my_logger import CURRENT_PATH
-    import json
     import os
     file_name = 'superstore.csv'  
     file_path = os.path.join(CURRENT_PATH, 'data', 'csv', file_name)
     df = load_csv_to_dataframe(file_path)
-    test_data_analysis_agent = WorkerAgent(agent_name="Data Analysis Agent 1",
-                                agent_description="A data analysis agent which can execute python code on given dataframe cached in workspace.",
-                                recursion_limit=25,
-                                tools=[execute_python_code_with_df],
-                                llm="qwen2.5-72b-instruct",
-                                verbose=True)
-    test_manager_agent_with_workspace = ManagerAgent(agent_name="Manager Agent 2",
-        agent_description="A manager agent which can direct a search agent with knowledge related task, \
-            a coding agent with logic related task, \
-            and a data analysis agent which can execute python code on given dataframe cached in workspace.",
-        recursion_limit=25,
-        tools=[],
-        subordinates=[test_search_agent, test_coding_agent, test_data_analysis_agent],
-        workspace={
+    manager_agent_with_workspace.update_workspace({
             "superstore": {
                 "content": df,
                 "metadata": {
                     "description": "This is a dataframe of superstore's sales data."
                     }
             },
-        },
-        llm="qwen2.5-72b-instruct",
-        verbose=True)
+        })
+    stream_output = True
     if df is not None:
-        test_result_workspace = asyncio.run(test_manager_agent_with_workspace(
-            message=HumanMessage(
-                # content="Help me find the best seller category in superstore data.",
-                content="Help me group sales amount by category in superstore data into a new dataframe.",
-                name="User"
-            )
-        ))
+        if stream_output:
+            async def stream_example():
+                stream_graph = manager_agent_with_workspace.astream(
+                    message=HumanMessage(
+                        content="Help me find the best seller category in superstore data.",
+                        # content="Help me group sales amount by category in superstore data into a new dataframe.",
+                        name="User"
+                    )
+                )
+                async for state in stream_graph:
+                    print("-"*40, flush=True)
+                    print(state, flush=True)
+                    print("-"*40, flush=True)
+            asyncio.run(stream_example())
+        else:
+            test_result_workspace = asyncio.run(manager_agent_with_workspace(
+                message=HumanMessage(
+                    content="Help me find the best seller category in superstore data.",
+                    # content="Help me group sales amount by category in superstore data into a new dataframe.",
+                    name="User"
+                )
+            ))
+    

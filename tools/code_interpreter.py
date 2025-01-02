@@ -54,7 +54,7 @@ class BlacklistCodeInterpreter:
         Returns:
             A cleaned dictionary with only serializable objects.
         """
-        from tools.data_loader import generate_dataframe_schema
+        from utility.data_loader import generate_dataframe_schema
         clean_env = {}
         for key, value in env.items():
             if isinstance(value, (int, float, str, list, dict, bool, type(None))):
