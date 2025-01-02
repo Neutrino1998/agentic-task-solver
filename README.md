@@ -2,6 +2,8 @@
 
 This repository contains a Python-based multi-agent system that facilitates task management and execution using a combination of **manager agents** and **worker agents**. The system is designed to provide a collaborative workspace for agents to share resources such as data frames and text, enabling them to execute complex tasks effectively.
 
+![frontend](data\img\frontend.png)
+
 ---
 
 ## **Table of Contents**
@@ -88,7 +90,7 @@ The workspace is a shared environment where agents and users can:
 1. Clone the repository:
    ```bash
    git clone https://github.com/Neutrino1998/agentic-task-solver.git
-   cd multi-agent-system
+   cd agentic-task-solver
    ```
 
 2. Install dependencies:
