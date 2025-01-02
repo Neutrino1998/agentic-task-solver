@@ -2,7 +2,7 @@
 
 This repository contains a Python-based multi-agent system that facilitates task management and execution using a combination of **manager agents** and **worker agents**. The system is designed to provide a collaborative workspace for agents to share resources such as data frames and text, enabling them to execute complex tasks effectively.
 
-![frontend](data\img\frontend.png)
+![frontend](data/img/frontend.png)
 
 ---
 
