@@ -138,7 +138,7 @@ def get_xml_workspace(workspace: dict, df_sample_size: int = 2, text_sample_size
     Returns:
         The rendered XML string.
     """
-    from tools.data_loader import generate_dataframe_schema
+    from utility.data_loader import generate_dataframe_schema
     # Start XML structure
     xml_output = "<workspace_content>"
     if workspace:
