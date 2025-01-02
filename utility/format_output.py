@@ -149,6 +149,7 @@ Please format the output using the following Json structure:
             logger.logger.debug(f"[{generation_id}] Message → LLM:\n{msg_str}")
 
         attempts = 0
+        last_err = None
         while attempts < self.max_retries:
             attempts += 1
             try:
@@ -164,11 +165,12 @@ Please format the output using the following Json structure:
                 return result.model_dump()  # If successful, return the result
                 
             except Exception as e:
-                logger.logger.warning(f"[{generation_id}] ⚠️ Error in generate format response, attempt {attempts}/{self.max_retries}: {str(e)}")
+                last_err = e
+                logger.logger.warning(f"[{generation_id}] ⚠️ Error in generate format response, attempt {attempts}/{self.max_retries}: {str(last_err)}")
                 await asyncio.sleep(self.retry_delay)  # Wait before retrying
 
         logger.logger.error(f"[{generation_id}] ⚠️ Max retries ({self.max_retries}) reached in generate format response.")
-        raise RuntimeError(f"Max retries ({self.max_retries}) reached. Last error: {str(e)}") from e
+        raise RuntimeError(f"Max retries ({self.max_retries}) reached. Last error: {str(last_err)}")
 
     def get_raw_response(self, additional_args: dict = {}):
         msg_dict = {**self.response.model_dump(), **additional_args}
