@@ -361,7 +361,7 @@ if __name__ == "__main__":
                     }
             },
         })
-    stream_output = True
+    stream_output = False
     if df is not None:
         if stream_output:
             async def stream_example():
