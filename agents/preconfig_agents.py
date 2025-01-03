@@ -3,11 +3,22 @@ from tools.code_interpreter import execute_python_code, execute_python_code_with
 from agents.worker import WorkerAgent
 from agents.manager import ManagerAgent
 
+auxiliary_search_prompt = """
+<response_requirements>
+    - Cite your response with sources in markdown style. For example:
+    <citation_example>
+        This is your response.[1]
+        [1] [source_title](source_url)
+    </citation_example>
+</response_requirements>
+"""
+
 search_agent = WorkerAgent(
     agent_name="Search Agent",
     agent_description="A search agent which can gather information online and solve knowledge related task.",
     recursion_limit=25,
     tools=[bing_search_engine],
+    auxiliary_prompt=auxiliary_search_prompt,
     llm="qwen2.5-72b-instruct",
     verbose=True
 )
