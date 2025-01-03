@@ -15,6 +15,5 @@ def get_env_var(key: str, default: str = None) -> str:
 
 # 定义 API Key
 DASHSCOPE_API_KEY = get_env_var("DASHSCOPE_API_KEY")
-GROQ_API_KEY = get_env_var("GROQ_API_KEY")
 DEEPSEEK_API_KEY = get_env_var("DEEPSEEK_API_KEY")
 BING_SUBSCRIPTION_KEY = get_env_var("BING_SUBSCRIPTION_KEY")

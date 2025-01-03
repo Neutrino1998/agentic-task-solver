@@ -1,7 +1,6 @@
 import os
 from langchain_community.chat_models.tongyi import ChatTongyi
 from langchain_openai import ChatOpenAI
-from langchain_groq import ChatGroq
 from langchain_community.embeddings import DashScopeEmbeddings
 # get key
 from config import DASHSCOPE_API_KEY, GROQ_API_KEY, DEEPSEEK_API_KEY
@@ -19,13 +18,7 @@ def get_llm(model_name: str="qwen2.5-72b-instruct"):
                 openai_api_base='https://api.deepseek.com',
                 max_tokens=1024
             )
-    elif model_name == 'llama-3.1-70b-versatile':
-        return ChatGroq(
-                model='llama-3.1-70b-versatile',
-                temperature=0.0,
-                max_retries=2,
-                # other params...
-            )
+
     else:
         return ChatTongyi(model=model_name)
 

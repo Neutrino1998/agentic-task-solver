@@ -1,6 +1,6 @@
 # Multi-Agent Task Solving System with Workspace Sharing
 
-This repository contains a Python-based multi-agent system that facilitates task management and execution using a combination of **manager agents** and **worker agents**. The system is designed to provide a collaborative workspace for agents to share resources such as data frames and text, enabling them to execute complex tasks effectively.
+This repository contains a Python-based multi-agent system that facilitates task management and execution using a combination of **manager agents** and **worker agents**. The system is designed to provide a collaborative workspace for agents to share resources such as data frames and text, enabling them to execute complex tasks effectively. For a detailed workflow, please check "[Building effective agents](https://www.anthropic.com/research/building-effective-agents)", section "Workflow: Routing" by Anthropic.
 
 ![frontend](data/img/frontend.png)
 
@@ -95,13 +95,12 @@ The workspace is a shared environment where agents and users can:
 
 2. Install dependencies:
    ```bash
-   pip install -r requirements.txt
+   pip install -e .
    ```
 
 3. Add API keys to `.env` file:
    ```properties
    DASHSCOPE_API_KEY=sk-xxx
-   GROQ_API_KEY=gsk_xxx
    DEEPSEEK_API_KEY=sk-xxx
    BING_SUBSCRIPTION_KEY=xxx
    ```
